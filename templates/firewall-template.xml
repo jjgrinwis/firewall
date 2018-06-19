@@ -1,0 +1,36 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0"                          
+                 servicepoint="firewall">                                         
+    <devices xmlns="http://tail-f.com/ns/ncs">                                    
+        <device>                                                                  
+            <name>{/fortinet/device}</name>                                       
+            <config>                                                              
+                <vdom xmlns="http://tail-f.com/ned/fortinet-fortios">             
+                    <vdom-list>                                                   
+                        <name>{/fortinet/vdom}</name>                             
+                        <firewall>                                                
+                            <address>                                             
+                                <address-list>                                    
+                                    <name>{/fortinet/obj}</name>                  
+                                    <subnet>                                      
+                                        <ip-mask>                                 
+                                            <class_ip>{/customer_ip}</class_ip>   
+                                            <net_mask>255.255.255.255</net_mask>  
+                                        </ip-mask>                                
+                                    </subnet>                                     
+                                </address-list>                                   
+                            </address>                                            
+                        </firewall>                                               
+                    </vdom-list>                                                  
+                </vdom>                                                           
+                <firewall xmlns="http://tail-f.com/ned/fortinet-fortios-non-vdom">
+                    <addrgrp>                                                     
+                        <addrgrp-list>                                            
+                            <name>IPSEC_{/name}</name>                            
+                            <member>{/fortinet/obj}</member>                      
+                        </addrgrp-list>                                           
+                    </addrgrp>                                                    
+                </firewall>                                                       
+            </config>                                                             
+        </device>                                                                 
+    </devices>                                                                    
+</config-template>                                                                

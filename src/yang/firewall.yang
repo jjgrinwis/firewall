@@ -1,0 +1,127 @@
+module firewall {
+  namespace "http://telindus/t-mobile/firewall";
+  prefix firewall;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import tailf-ncs {
+    prefix ncs;
+  }
+  import tailf-common {
+    prefix tailf;
+  }
+  import tailf-ned-fortinet-fortios {
+    prefix fortinet-fortios;
+  }
+  
+  organization "Telindus NL for T-Mobile NL";
+
+  description
+    "This module will configure fortinet firewall";
+
+  revision 2018-06-19 {
+    description
+      "Initial version of the t-mobile.nl firewall service.
+      We statically configure three settings in nso as they 
+      are always the same (for now). 
+
+      1: device -> our primary fortinet device.
+      2: vdom -> vdom where customers will be configured.
+      3: obj -> default obj name.
+
+      So the only input parameter we need is the name of the service
+      and ip address which is always a /32.";
+  }
+
+  augment /ncs:services {
+
+    container fortinet {
+      description "our statically configured fortinet device and related info. 
+                  We might change this to a list so a service can be directed to a certain fortinet device";
+      tailf:info "provide info for the t-mobile.nl fortinet device";
+
+      leaf device {
+        description "a leaf as we're only configuring just one fortinet device, the master";
+        tailf:info "provide fortinet firewall device";
+        type leafref {
+            path "/ncs:devices/ncs:device/ncs:name";
+        }
+        default "f0";
+
+        // should be a fortinet device and regex to check name
+        // $ ncs_cmd -c "xe boolean(/devices/device[name='f0']/ncs:module[1]/ncs:name='tailf-ned-fortinet-fortios')"
+        must "/ncs:devices/ncs:device[ncs:name=current()]/ncs:module[1]/ncs:name='tailf-ned-fortinet-fortios'";
+        must "re-match(current(),'f.*')";
+      } 
+
+      leaf vdom {
+        description "all customers are always configured in just one vdom";
+        tailf:info "provide vdom on selected device";
+        type leafref {
+          // /ncs:devices/ncs:device[ncs:name='f0']/ncs:config/fortinet-fortios:vdom/fortinet-fortios:vdom-list[fortinet-fortios:name='vdom01']
+          path "deref(../device)/../ncs:config/fortinet-fortios:vdom/fortinet-fortios:vdom-list/fortinet-fortios:name";
+           
+        }
+        default "vdom01";
+      }
+
+      leaf obj {
+        description "all customers are always configured under the same object name";
+        tailf:info "provide object name on selected device";
+        type leafref {
+          // should point to obj config on device
+          path "deref(../device)/../ncs:config/fortinet-fortios:vdom/fortinet-fortios:vdom-list[fortinet-fortios:name=current()/../vdom]/fortinet-fortios:firewall/fortinet-fortios:address/fortinet-fortios:address-list/fortinet-fortios:name";
+        }
+        default "obj01";
+      }
+    }
+
+    list firewall {
+      tailf:info "tmnl customers firewall services";
+      key name;
+      unique customer_ip;
+
+      uses ncs:service-data;
+      ncs:servicepoint "firewall";
+
+      leaf name {
+        tailf:info "provide name of firewall service";
+        type string {
+          length "5..25";
+        }
+      }
+
+      leaf customer_ip {
+        description "ip4 address of customer. Endpoint will always be a /32";
+        tailf:info "provide customer ipv4 endpoint address";
+        type inet:ipv4-address;
+      }
+
+      // info below just pointer to our configured fortinet info.
+      container fortinet {
+        description "fortinet info. This will just point to our preconfigured values in s/ncs:service/firewall:fortinet
+                     No need to configure anything in this container.
+                     Using tailf:link so you can see configured values in show commands but can be ommited.
+                     So template can point to these values or straigth to /ncs:services/firewall:fortinet.";
+
+        config false;
+
+        leaf device {
+          tailf:link "/ncs:services/firewall:fortinet/firewall:device";
+          type string;
+        }
+
+        leaf vdom {
+          tailf:link "/ncs:services/firewall:fortinet/firewall:vdom";
+          type string;
+        }
+
+        leaf obj {
+          tailf:link "/ncs:services/firewall:fortinet/firewall:obj";
+          type string;
+        }
+      }
+    }
+  }
+}
